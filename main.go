@@ -48,17 +48,16 @@ func Maximum(data []int) int {
 func maxChunks(data []int) int {
 	// ваш код здесь
 	var (
-		maxSlice = make([]int, 0, CHUNKS) // слайс максимумов, общий для всех горутин
-		lenChunk = SIZE / CHUNKS          // длина среза для одной горутины (а если нацело не делится?)
+		maxSlice = make([]int, CHUNKS) // слайс максимумов, общий для всех горутин
+		lenChunk = len(data) / CHUNKS  // длина среза для одной горутины (а если нацело не делится?)
 		wg       sync.WaitGroup
-		mu       sync.Mutex
 	)
 
 	wg.Add(CHUNKS)          // количество горутин
 	for i := range CHUNKS { // запускаем горутины
-		go func(i int) {
-			defer wg.Done()                                 // откладываем уменьшение счётчика горутин
-			chunk := data[lenChunk*i : lenChunk*i+lenChunk] // формируем срез, с которым будет работать горутина
+		chunk := data[lenChunk*i : lenChunk*i+lenChunk] // формируем срез, с которым будет работать горутина
+		go func(i int, chunk []int) {
+			defer wg.Done() // откладываем уменьшение счётчика горутин
 
 			var max int
 			for _, v := range chunk {
@@ -66,10 +65,9 @@ func maxChunks(data []int) int {
 					max = v
 				}
 			}
-			mu.Lock() // чтоб писать в слайс монопольно
-			maxSlice = append(maxSlice, max)
-			mu.Unlock()
-		}(i)
+			maxSlice[i] = max
+			fmt.Printf("Горутина %d обработала %d элементов\n", i, len(chunk)) // проверка (поиск "хвоста")
+		}(i, chunk)
 
 	}
 	wg.Wait()
@@ -89,12 +87,11 @@ func main() {
 	// ваш код здесь
 	before := time.Now() // начальная отсечка выполнения функции
 	max := Maximum(slice)
-	after := time.Now() // конечная
-	if max == 0 {       // обрабатываем нулевой размер слайса
+	elapsed := time.Since(before).Microseconds()
+	if max == 0 { // обрабатываем нулевой размер слайса
 		fmt.Println("Дубина, нужен слайс ненулевой длины и с положительными элементами! Всё, финиш!")
 		return
 	}
-	elapsed := int(after.Sub(before).Microseconds()) // микросекунды - в тип int
 
 	fmt.Printf("Максимальное значение элемента: %d\nВремя поиска: %d µs\n", max, elapsed)
 
@@ -102,12 +99,11 @@ func main() {
 	// ваш код здесь
 	before = time.Now() // начальная отсечка выполнения функции
 	max = maxChunks(slice)
-	after = time.Now() // конечная
-	if max == 0 {      // обрабатываем нулевой размер слайса
+	elapsed = time.Since(before).Microseconds()
+	if max == 0 { // обрабатываем нулевой размер слайса
 		fmt.Println("Дубина, нужен слайс ненулевой длины! Всё, финиш!")
 		return
 	}
-	elapsed = int(after.Sub(before).Microseconds()) // микросекунды - в тип int
 
 	fmt.Printf("Максимальное значение элемента: %d\nВремя поиска: %d µs\n", max, elapsed)
 }
