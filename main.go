@@ -20,7 +20,7 @@ func GenerateRandomElements(size int) []int {
 	}
 	wholeSlice := make([]int, size) // создаём болванку слайса
 	for i := range size {           // заполняем его (псевдо)случайными положительными значениями в количестве size элементов
-		wholeSlice[i] = rand.Int() + 1 // чтоб точно положительными (т.к. ТЗ требует)
+		wholeSlice[i] = rand.Int()
 	}
 	return wholeSlice // возвращаем сгенерированный слайс
 }
@@ -29,49 +29,52 @@ func GenerateRandomElements(size int) []int {
 func Maximum(data []int) int {
 	// ваш код здесь
 	if len(data) == 0 { // обрабатываем нулевой размер слайса
-		return 0
+		return -1 // 0 нельзя использовать, т.к. он может быть нормальным возвратом функции (теоретически)
 	}
+
 	var max int
-	for _, v := range data {
-		if v > 0 {
-			if v > max {
-				max = v
-			}
-		} else { // обрабатываем наличие в слайсе неположительных элементов
-			return 0
+	for _, v := range data { // собственно, ищем максимум
+		if v > max {
+			max = v
 		}
 	}
 	return max
 }
 
-// maxChunks returns the largest element of slice in a chunks.
-func maxChunks(data []int) int {
+// MaxChunks returns the largest element of slice in chunks.
+func MaxChunks(data []int) int {
 	// ваш код здесь
+	if len(data) == 0 { // обрабатываем нулевой размер слайса
+		return -1
+	}
+
 	var (
-		maxSlice = make([]int, CHUNKS) // слайс максимумов, общий для всех горутин
-		lenChunk = len(data) / CHUNKS  // длина среза для одной горутины (а если нацело не делится?)
-		wg       sync.WaitGroup
+		sliceMax  = make([]int, CHUNKS) // слайс максимумов, общий для всех горутин
+		remainder = len(data) % CHUNKS  // если есть остаток, значит, есть хвост
+		lenChunk  = len(data) / CHUNKS  // длина среза для одной горутины (т.е. длина чанки), не считая хвоста
+		chunk     []int                 // производный слайс, с которым будет работать горутина (срез от исходного)
+		wg        sync.WaitGroup
 	)
 
-	wg.Add(CHUNKS)          // количество горутин
+	wg.Add(CHUNKS) // количество горутин
+
 	for i := range CHUNKS { // запускаем горутины
-		chunk := data[lenChunk*i : lenChunk*i+lenChunk] // формируем срез, с которым будет работать горутина
+		if remainder != 0 && i == CHUNKS-1 { // если хвост есть и горутина - последняя
+			// формируем срез, с которым будет работать горутина
+			chunk = data[lenChunk*i : lenChunk*i+lenChunk+remainder] // хвост не забыт
+		} else { // в прочих случаях - простой порядок (без хвоста)
+			chunk = data[lenChunk*i : lenChunk*i+lenChunk] // формируем срез, с которым будет работать горутина
+		}
+
 		go func(i int, chunk []int) {
 			defer wg.Done() // откладываем уменьшение счётчика горутин
 
-			var max int
-			for _, v := range chunk {
-				if v > max {
-					max = v
-				}
-			}
-			maxSlice[i] = max
-			fmt.Printf("Горутина %d обработала %d элементов\n", i, len(chunk)) // проверка (поиск "хвоста")
+			sliceMax[i] = Maximum(chunk)
 		}(i, chunk)
 
 	}
 	wg.Wait()
-	return Maximum(maxSlice)
+	return Maximum(sliceMax)
 }
 
 func main() {
@@ -88,8 +91,8 @@ func main() {
 	before := time.Now() // начальная отсечка выполнения функции
 	max := Maximum(slice)
 	elapsed := time.Since(before).Microseconds()
-	if max == 0 { // обрабатываем нулевой размер слайса
-		fmt.Println("Дубина, нужен слайс ненулевой длины и с положительными элементами! Всё, финиш!")
+	if max == -1 { // обрабатываем нулевой размер слайса
+		fmt.Println("Дубина, нужен слайс ненулевой длины! Всё, финиш!")
 		return
 	}
 
@@ -98,9 +101,9 @@ func main() {
 	fmt.Printf("Ищем максимальное значение в %d потоков\n", CHUNKS)
 	// ваш код здесь
 	before = time.Now() // начальная отсечка выполнения функции
-	max = maxChunks(slice)
+	max = MaxChunks(slice)
 	elapsed = time.Since(before).Microseconds()
-	if max == 0 { // обрабатываем нулевой размер слайса
+	if max == -1 { // обрабатываем нулевой размер слайса
 		fmt.Println("Дубина, нужен слайс ненулевой длины! Всё, финиш!")
 		return
 	}
