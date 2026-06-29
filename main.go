@@ -59,7 +59,7 @@ func MaxChunks(data []int) int {
 	wg.Add(CHUNKS) // количество горутин
 
 	for i := range CHUNKS { // запускаем горутины
-		if remainder != 0 && i == CHUNKS-1 { // если хвост есть и горутина - последняя
+		if remainder != 0 && i == CHUNKS-1 { // если хвост есть, и горутина - последняя
 			// формируем срез, с которым будет работать горутина
 			chunk = data[lenChunk*i : lenChunk*i+lenChunk+remainder] // хвост не забыт
 		} else { // в прочих случаях - простой порядок (без хвоста)
